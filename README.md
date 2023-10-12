@@ -7,6 +7,8 @@
 
 修改完重启docker
 
+效果如下
+
 ![Alt Text](/效果.png)
 
 寻求有能力的大佬把主题迁移到dashboard-custom文件夹中，
