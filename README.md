@@ -5,7 +5,9 @@
 
 注意要修改api密钥，否则ip不能正常显示
 
-效果如下
- 
+修改完重启docker
 
-寻求有能力的大量把主题迁移到dashboard-custom文件，
+
+
+寻求有能力的大佬把主题迁移到dashboard-custom文件，
+有问题联系我@cnayan
