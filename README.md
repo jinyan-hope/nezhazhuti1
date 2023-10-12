@@ -1,4 +1,4 @@
-# nezhazhuti1
+# 哪吒主题
 哪吒自定义主题
 
 修改 /merged/dashboard/resource/template/theme-hotaru目录下home.html文件
