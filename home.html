@@ -1,0 +1,447 @@
+{{define "theme-hotaru/home"}}
+<!doctype html>
+<html lang="{{.Conf.Language}}">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>{{.Title}}</title>
+    <link rel="shortcut icon" type="image/png" href="/static/logo.svg?v20210804" />
+
+    <!-- Fix chrome language detection -->
+    <meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+    <meta http-equiv="Content-Language" content="zh" />
+
+    <!-- Styles -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.staticfile.org/semantic-ui/2.4.1/semantic.min.css">
+    <link rel="stylesheet" type="text/css" href="https://cdn.staticfile.org/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" type="text/css" href="/static/semantic-ui-alerts.min.css">
+    <link rel="stylesheet" href="/static/theme-hotaru/css/core.css?v202012121912" type="text/css">
+    <link rel="stylesheet" href="/static/theme-hotaru/css/main.css?v202101171153" type="text/css">
+    <link rel="stylesheet" href="/static/theme-hotaru/css/darkmode.css?v202103021121" type="text/css">
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <style>
+        .btn-tools {
+            margin: 10px 0;
+        }
+    </style>
+    {{if ts .CustomCode}}
+    {{.CustomCode|safe}}
+    {{end}}
+</head>
+
+<body>
+    <section class="hotaru-cover" style="position:relative">
+        <div class="container" style="text-align: center">
+            <h1 style="line-height: 8rem;">
+                <strong>{{.Title}}</strong>
+
+            </h1>
+            <span style="position:absolute;right:10px;top:10px;font-size:14px; ">
+                <a href="/server" style="color:#1e88e5">{{tr "AdminPanel"}}</a>
+            </span>
+            <!--<a href="/oauth2/login" class="ui fluid large nezha-primary-btn submit button">{{tr "Login"}}</a>-->
+
+        </div>
+    </section>
+
+    <div id="app">
+        <div class="container" style="margin:0;padding:80px;padding-top:0;width:100%">
+            <div class="btn-tools">
+                <el-input style="width:200px" v-model="queryParams.name" placeholder="请输入名称" clearable
+                    @change="nameChange" size="mini"></el-input>
+            </div>
+            <el-table :min-height="500" :data="servers" style="width: 100%">
+                <el-table-column prop="index" label="序号" width="80" align="center">
+                </el-table-column>
+                <el-table-column prop="live" label="状态" width="80" align="center">
+                    <template slot-scope="scope">
+                        <el-tag type="success" v-if="scope.row.live">运行中</el-tag>
+                        <el-tag type="info" v-else>离线</el-tag>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="Name" label="名称" width="150" align="center">
+                </el-table-column>
+                <el-table-column prop="IP" label="IP" align="center">
+                    <template slot-scope="scope">
+                        @#scope.row.ip#@
+                    </template>
+                </el-table-column>
+                <el-table-column prop="live" label="系统" width="80" align="center">
+                    <template slot-scope="scope">
+                        @#scope.row.Host?scope.row.Host.Platform:'-'#@
+                    </template>
+                </el-table-column>
+                <el-table-column prop="live" label="地区" width="80" align="center">
+                    <template slot-scope="scope">
+                        @#scope.row.Host?.CountryCode#@
+                    </template>
+                </el-table-column>
+                <el-table-column prop="live" label="图标" width="90" align="center">
+                    <template slot-scope="scope">
+
+                        <img style="width:30px;height:30px;"
+                            :src="'/static/theme-hotaru/img/clients/'+(scope.row.Host&&scope.row.Host?.CountryCode?scope.row.Host?.CountryCode.toUpperCase():'CN')+'.png'">
+                    </template>
+                </el-table-column>
+                <el-table-column prop="Tag" label="服务器分组" width="100" align="center"></el-table-column>
+                <el-table-column prop="live" label="在线" align="center" width="80">
+                    <template slot-scope="scope">
+                        @#scope.row.State?secondToDate(scope.row.State.Uptime):'-'#@
+                    </template>
+                </el-table-column>
+                <el-table-column prop="live" label="网络(B/s) ↓|↑" width="160" align="center">
+                    <template slot-scope="scope">
+                        <span v-if="scope.row.State">
+                            @#readableBytes(scope.row.State.NetInSpeed) #@/s
+                            @#readableBytes(scope.row.State.NetOutSpeed) #@/s
+                        </span>
+                        <span v-else>-</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="live" label="流量(B) ↓|↑" width="160" align="center">
+                    <template slot-scope="scope">
+                        <span v-if="scope.row.State">
+                            @#readableBytes(scope.row.State.NetInTransfer)#@|
+                            @#readableBytes(scope.row.State.NetOutTransfer)#@
+                        </span>
+                        <span v-else>-</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="live" label="CPU" width="80" align="center">
+                    <!--color="#1bc5bd"-->
+                    <template slot-scope="scope">
+                        <span v-if="scope.row.State">
+                            <el-progress :width="30" type="circle" :percentage="parseInt(scope.row.State.CPU)"
+                                :color="colors"></el-progress>
+                        </span>
+                        <span v-else>-</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="RAM" label="RAM" width="80" align="center">
+                    <template slot-scope="scope">
+                        <span v-if="scope.row.State">
+                            <el-progress :width="30" type="circle"
+                                :percentage="parseInt(scope.row.State.MemUsed/scope.row.Host.MemTotal*100)"
+                                :color="colors"></el-progress>
+                        </span>
+                        <span v-else>-</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="DiskUsed" label="硬盘" width="80" align="center">
+                    <template slot-scope="scope">
+                        <span v-if="scope.row.State">
+                            <el-progress :width="30" type="circle"
+                                :percentage="parseInt(scope.row.State.DiskUsed/scope.row.Host.DiskTotal*100)"
+                                :color="colors"></el-progress>
+                        </span>
+                        <span v-else>-</span>
+                    </template>
+                </el-table-column>
+                <!--<el-table-column prop="live" label="一键安装">-->
+                <!--    <template slot-scope="scope">-->
+
+                <!--    </template>-->
+                <!-- </el-table-column>-->
+                <!--<el-table-column prop="live" label="备注">-->
+                <!--    <template slot-scope="scope">-->
+                <!--        @#scope.row.Host.Version#@-->
+                <!--    </template>-->
+                <!--</el-table-column>-->
+                <!--<el-table-column prop="live" label="管理">-->
+                <!--    <template slot-scope="scope">-->
+                <!--        <i @click="connectToServer(scope.row.ID)" class="el-icon-s-tools" title="终端"></i>-->
+                <!--        <i @click="addOrEditServer(scope.row.Marshal)" class="el-icon-edit-outline" title="编辑"></i>-->
+                <!--        <i @click="deleteItem(scope.row.ID)" class="el-icon-delete" title="删除"></i>-->
+                <!--    </template>-->
+                <!--</el-table-column>-->
+            </el-table>
+            <el-pagination style="margin-top:10px" @size-change="handleSizeChange" @current-change="handleCurrentChange"
+                :current-page="queryParams.pageNum" :page-sizes="[10, 20, 50, 100]" :page-size="queryParams.pageSize"
+                layout="->,total, sizes, prev, pager, next, jumper" :total="total">
+            </el-pagination>
+        </div>
+    </div>
+    <!--<div class="sidebar-container">-->
+    <!--    <ul>-->
+    <!--        <li id='sun'><i class="fas fa-sun" title='{{tr "LightMode"}}'></i><span>{{tr "LightMode"}}</span></li>-->
+    <!--        <li id='moon'><i class="fas fa-moon" title='{{tr "DarkMode"}}'></i><span>{{tr "DarkMode"}}</span></li>-->
+    <!--    </ul>-->
+    <!--</div>-->
+    <footer>
+        <p style="text-align:center;padding: 15px;">Powered by <a href="https://github.com/naiba/nezha">{{tr
+                "NezhaMonitoring"}}</a> build ·
+            {{.Version}}
+            <a href="/service">{{tr "Services"}}</a>
+            <a href="/server">{{tr "AdminPanel"}}</a>
+        </p>
+    </footer>
+    <script src="https://cdn.staticfile.org/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.staticfile.org/semantic-ui/2.4.1/semantic.min.js"></script>
+    <script src="/static/semantic-ui-alerts.min.js"></script>
+    <script src="https://cdn.staticfile.org/vue/2.6.14/vue.min.js"></script>
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <script src="https://cdn.staticfile.org/clipboard.js/2.0.10/clipboard.min.js"
+        type="application/javascript"></script>
+    <script>
+        var clipboard = new ClipboardJS('.ui.icon.green.mini.button');
+        const initData = JSON.parse('{{.Servers}}').servers;
+        var statusCards = new Vue({
+            el: '#app',
+            delimiters: ['@#', '#@'],
+            data: {
+                total: 0,
+                servers: initData,
+                serversCash: [],
+                queryParams: {
+                    name: '',
+                    pageNum: 1,
+                    pageSize: 20
+                },
+                colors: [
+                    { color: '#5cb87a', percentage: 30 },
+                    { color: '#e6a23c', percentage: 50 },
+                    { color: '#6f7ad3', percentage: 70 },
+                    { color: '#F56C6C', percentage: 100 }
+                ],
+                cache: [],
+            },
+            mounted() {
+                this.troggleDarkMode();
+            },
+            methods: {
+                handleSizeChange(val) {
+                    this.queryParams.pageSize = val
+                    this.handlePageChange()
+                },
+                handleCurrentChange(val) {
+                    this.queryParams.pageNum = val
+                    this.handlePageChange()
+                },
+                handlePageChange(val) {
+                    const page = this.queryParams.pageNum - 1 < 0 ? 1 : this.queryParams.pageNum - 1
+                    const table = JSON.parse(JSON.stringify(this.serversCash))
+                    this.servers = table.slice(page * this.queryParams.pageSize, page * this.queryParams.pageSize + this.queryParams.pageSize)
+                },
+                nameChange(val) {
+                    this.servers = this.serversCash.filter(item => {
+                        return item.Name.includes(val)
+                    })
+                },
+                mergeUsage(state, host) {
+                    if (!state) {
+                        return 0
+                    }
+                    if (!host) {
+                        return state.CPU
+                    }
+                    return (state.CPU + (state.MemUsed / host.MemTotal * 100) + (state.DiskUsed / host.DiskTotal * 100)) / 3
+                },
+                formatPercent(live, used, total) {
+                    const percent = live ? (parseInt(used / total * 100) || 0) : -1
+                    if (!this.cache[percent]) {
+                        this.cache[percent] = {
+                            class: {
+                                ui: true,
+                                progress: true,
+                            },
+                            style: {
+                                'transition-duration': '300ms',
+                                'min-width': 'unset',
+                                width: percent + '% !important',
+                            },
+                            percent,
+                        }
+                        if (percent < 0) {
+                            this.cache[percent].style['background-color'] = 'slategray'
+                            this.cache[percent].class.offline = true
+                        } else if (percent < 51) {
+                            this.cache[percent].style['background-color'] = '#0a94f2'
+                            this.cache[percent].class.fine = true
+                        } else if (percent < 81) {
+                            this.cache[percent].style['background-color'] = 'orange'
+                            this.cache[percent].class.warning = true
+                        } else {
+                            this.cache[percent].style['background-color'] = 'crimson'
+                            this.cache[percent].class.error = true
+                        }
+                    }
+                    return this.cache[percent]
+                },
+                readableBytes(bytes) {
+                    if (!bytes) {
+                        return '0B'
+                    }
+                    var i = Math.floor(Math.log(bytes) / Math.log(1024)),
+                        sizes = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+                    return parseFloat((bytes / Math.pow(1024, i)).toFixed(2)) + sizes[i];
+                },
+                formatByteSize(bs) {
+                    const x = this.readableBytes(bs)
+                    return x != "NaN undefined" ? x : '0B'
+                },
+                troggleDarkMode() {
+                    const hour = new Date(Date.now()).getHours()
+                    if (hour > 17 || hour < 4) {
+                        document.body.classList.add('dark');
+                    }
+                },
+                secondToDate(s) {
+                    var d = Math.floor(s / 3600 / 24);
+                    if (d > 0) {
+                        return d + " {{tr "Day"}}"
+                    }
+                    var h = Math.floor(s / 3600 % 24);
+                    var m = Math.floor(s / 60 % 60);
+                    var s = Math.floor(s % 60);
+                    return h + ":" + ("0" + m).slice(-2) + ":" + ("0" + s).slice(-2);
+                },
+                formatTimestamp(t) {
+                    return new Date(t * 1000).toLocaleString()
+                }
+            }
+        })
+        var ipResult;
+        $('body').removeClass('dark');
+        $.ajax({
+            headers: {
+                "Authorization": 'Epg6khlXxIFuV7eqB8u6MyqsxZ2HNgBx'//此处放置请求到的用户token
+            },
+            url: '/api/v1/server/list',
+            type: "get",
+            contentType: "application/json",
+            dataType: 'json',
+            success: function (res) {
+                ipResult = res.result.sort((a, b) => {
+                    return a.id - b.id
+                })
+            },
+            error: function () {
+                alert("请求失败！");
+            }
+        })
+
+
+        $(function () {
+            $('body').removeClass('dark');
+            // $('#sun').click(function () {
+            //     $('body').removeClass('dark');
+            // });
+            // $('#moon').click(function () {
+            //     $('body').addClass('dark');
+            // })
+        })
+
+        const wsProtocol = window.location.protocol == "https:" ? "wss" : "ws"
+        let canShowError = true;
+        function connect() {
+            const ws = new WebSocket(wsProtocol + '://' + window.location.host + '/ws');
+            ws.onopen = function (evt) {
+                canShowError = true;
+                $.suiAlert({
+                    title: '{{tr "RealtimeChannelEstablished"}}',
+                    description: '{{tr "GetTheLatestMonitoringDataInRealTime"}}',
+                    type: 'success',
+                    time: '2',
+                    position: 'top-center',
+                });
+            }
+            ws.onmessage = function (evt) {
+                const data = JSON.parse(evt.data)
+                // 测试需恢复
+                statusCards.servers = data.servers
+                statusCards.servers.forEach((item,index) =>{
+                    item.index = index + 1
+                })
+                // statusCards.servers = [
+                //     { index: 1, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 2, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 3, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 4, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 5, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 6, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 7, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 8, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 9, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 10, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 11, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 12, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 13, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 14, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 15, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 16, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 17, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 18, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 19, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 20, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 21, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 22, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 23, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 24, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 25, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 26, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 27, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 28, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 29, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 30, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 31, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 32, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 33, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 34, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 35, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 36, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 37, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 38, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 39, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                //     { index: 40, date: '2016-05-02', name: '王小虎', address: '上海市普陀区金沙江路 1518 弄' },
+                // ]
+                if (ipResult) {
+                    statusCards.servers.forEach((item, index) => {
+                        statusCards.$set(statusCards.servers[index], 'ip', ipResult[index]?.ipv4 + '/' + ipResult[index]?.ipv6)
+                    })
+                }
+                if(statusCards.name){
+                    statusCards.nameChange()
+                }
+                statusCards.total = statusCards.servers.length
+                statusCards.serversCash = JSON.parse(JSON.stringify(statusCards.servers))
+                statusCards.handlePageChange()
+                for (let i = 0; i < statusCards.servers.length; i++) {
+                    const ns = statusCards.servers[i];
+                    if (!ns.Host) ns.live = false
+                    else {
+                        const lastActive = new Date(ns.LastActive).getTime()
+                        if (data.now - lastActive > 10 * 1000) {
+                            ns.live = false
+                        } else {
+                            ns.live = true
+                        }
+                    }
+                }
+            }
+            ws.onclose = function () {
+                if (canShowError) {
+                    canShowError = false;
+                    $.suiAlert({
+                        title: '{{tr "RealtimeChannelDisconnect"}}',
+                        description: '{{tr "CanNotGetTheLatestMonitoringDataInRealTime"}}',
+                        type: 'warning',
+                        time: '2',
+                        position: 'top-center',
+                    });
+                }
+                setTimeout(function () {
+                    connect()
+                }, 3000);
+            }
+            ws.onerror = function () {
+                ws.close()
+            }
+        }
+        connect()
+    </script>
+</body>
+
+</html>
+{{end}}
