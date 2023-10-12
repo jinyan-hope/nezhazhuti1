@@ -12,4 +12,4 @@
 ![Alt Text](/效果.png)
 
 寻求有能力的大佬把主题迁移到dashboard-custom文件夹中，
-有问题联系我[https://t.me/cnayan)https://t.me/cnayan](https://t.me/cnayan)https://t.me/cnayan
+有问题联系我https://t.me/cnayan
