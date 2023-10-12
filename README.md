@@ -1,6 +1,8 @@
 # 哪吒主题
 哪吒自定义主题
 
+可以搜索服务器名和ip
+
 修改 /merged/dashboard/resource/template/theme-hotaru目录下home.html文件
 
 注意要修改api密钥，否则ip不能正常显示
